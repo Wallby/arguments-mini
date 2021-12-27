@@ -1,7 +1,7 @@
 #ifndef ARGUMENTS_MINI_H
 #define ARGUMENTS_MINI_H
 
-#define ARGUMENTS_MINI_VERSION 0.1
+#define ARGUMENTS_MINI_VERSION 0.1.1
 
 #ifdef __cplusplus
 #define AM_FUNCTION extern "C"
