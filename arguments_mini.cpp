@@ -152,7 +152,7 @@ extern "C" int am_parse(int argc, char** argv)
 			if(a == 1)
 			{
 				char b[128];
-				sprintf_s(b, 128, "error: %i%s element in argv is parameter missing parametername\n", i+1, ORDINAL_NUMBER_SUFFIX(i+1));
+				snprintf(b, 128, "error: %i%s element in argv is parameter missing parametername\n", i+1, ORDINAL_NUMBER_SUFFIX(i+1));
 				on_print(b);
 
 				return 0;
@@ -164,7 +164,7 @@ extern "C" int am_parse(int argc, char** argv)
 				if(a == 2)
 				{
 					char b[128];
-					sprintf_s(b, 128, "error: %i%s element in argv is parameter missing parametername\n", i+1, ORDINAL_NUMBER_SUFFIX(i+1));
+					snprintf(b, 128, "error: %i%s element in argv is parameter missing parametername\n", i+1, ORDINAL_NUMBER_SUFFIX(i+1));
 					on_print(b);
 
 					return 0;
@@ -175,7 +175,7 @@ extern "C" int am_parse(int argc, char** argv)
 				if(argv[i][2] == '-')
 				{
 					char b[128];
-					sprintf_s(b, 128, "error: invalid parameter %s\n", argv[i]);
+					snprintf(b, 128, "error: invalid parameter %s\n", argv[i]);
 					on_print(b);
 
 					return 0;
@@ -201,7 +201,7 @@ extern "C" int am_parse(int argc, char** argv)
 					// i.e. -<parametername>
 					//       ^
 					//       +1
-					sprintf_s(b, 128, "error: '-' parameter \"%s\" is missing '=' sign", argv[i] + 1);
+					snprintf(b, 128, "error: '-' parameter \"%s\" is missing '=' sign", argv[i] + 1);
 					on_print(b);
 
 					return 0;
@@ -234,7 +234,7 @@ extern "C" int am_parse(int argc, char** argv)
 				if(argv[i][j] == '=') //< forbidden in all but parameterwithvalue
 				{
 					char b[128];
-					sprintf_s(b, 128, "error: '=' in %s\n", type == EArgvElementType_Argument ? "argument" : "'--' parameter");
+					snprintf(b, 128, "error: '=' in %s\n", type == EArgvElementType_Argument ? "argument" : "'--' parameter");
 					on_print(b);
 
 					return 0;
@@ -250,7 +250,7 @@ extern "C" int am_parse(int argc, char** argv)
 			if(indexToArgument != -1)
 			{
 				char b[128];
-				sprintf_s(b, 128, "error: more than one argument supplied (i.e. %s and %s)\n", argv[indexToArgument], argv[i]);
+				snprintf(b, 128, "error: more than one argument supplied (i.e. %s and %s)\n", argv[indexToArgument], argv[i]);
 
 				on_print(b);
 				return 0;
@@ -298,7 +298,7 @@ extern "C" int am_parse(int argc, char** argv)
 				if(bIsDuplicate == 1)
 				{
 					char c[128];
-					sprintf_s(c, 128, "error: duplicate parameter \"%%.%is\"\n", parameternameLength);
+					snprintf(c, 128, "error: duplicate parameter \"%%.%is\"\n", parameternameLength);
 					// ^
 					// limit # characters to print
 
@@ -306,7 +306,7 @@ extern "C" int am_parse(int argc, char** argv)
 					// i.e. --<parametername>
 					//        ^
 					//        +2
-					sprintf_s(d, 128, c, argv[i] + 2);
+					snprintf(d, 128, c, argv[i] + 2);
 
 					on_print(d);
 					return 0;
@@ -372,7 +372,7 @@ extern "C" int am_parse(int argc, char** argv)
 				if(bIsDuplicate == 1)
 				{
 					char d[128];
-					sprintf_s(d, 128, "error: duplicate parameter \"%%.%is\"\n", b.parameternameLength);
+					snprintf(d, 128, "error: duplicate parameter \"%%.%is\"\n", b.parameternameLength);
 					// ^
 					// limit # characters to print
 
@@ -380,7 +380,7 @@ extern "C" int am_parse(int argc, char** argv)
 					// i.e. -<parametername>=<value>
 					//       ^
 					//       +1
-					sprintf_s(e, 128, d, argv[i] + 1);
+					snprintf(e, 128, d, argv[i] + 1);
 
 					on_print(e);
 					return 0;
