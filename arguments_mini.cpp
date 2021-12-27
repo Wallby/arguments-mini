@@ -153,7 +153,11 @@ extern "C" int am_parse(int argc, char** argv)
 			{
 				char b[128];
 				snprintf(b, 128, "error: %i%s element in argv is parameter missing parametername\n", i+1, ORDINAL_NUMBER_SUFFIX(i+1));
-				on_print(b);
+
+				if(on_print != NULL)
+				{
+					on_print(b);
+				}
 
 				return 0;
 			}
@@ -165,7 +169,11 @@ extern "C" int am_parse(int argc, char** argv)
 				{
 					char b[128];
 					snprintf(b, 128, "error: %i%s element in argv is parameter missing parametername\n", i+1, ORDINAL_NUMBER_SUFFIX(i+1));
-					on_print(b);
+
+					if(on_print != NULL)
+					{
+						on_print(b);
+					}
 
 					return 0;
 				}
@@ -176,7 +184,11 @@ extern "C" int am_parse(int argc, char** argv)
 				{
 					char b[128];
 					snprintf(b, 128, "error: invalid parameter %s\n", argv[i]);
-					on_print(b);
+
+					if(on_print != NULL)
+					{
+						on_print(b);
+					}
 
 					return 0;
 				}
@@ -202,7 +214,11 @@ extern "C" int am_parse(int argc, char** argv)
 					//       ^
 					//       +1
 					snprintf(b, 128, "error: '-' parameter \"%s\" is missing '=' sign", argv[i] + 1);
-					on_print(b);
+
+					if(on_print != NULL)
+					{
+						on_print(b);
+					}
 
 					return 0;
 				}
@@ -235,7 +251,11 @@ extern "C" int am_parse(int argc, char** argv)
 				{
 					char b[128];
 					snprintf(b, 128, "error: '=' in %s\n", type == EArgvElementType_Argument ? "argument" : "'--' parameter");
-					on_print(b);
+
+					if(on_print != NULL)
+					{
+						on_print(b);
+					}
 
 					return 0;
 				}
@@ -252,7 +272,11 @@ extern "C" int am_parse(int argc, char** argv)
 				char b[128];
 				snprintf(b, 128, "error: more than one argument supplied (i.e. %s and %s)\n", argv[indexToArgument], argv[i]);
 
-				on_print(b);
+				if(on_print != NULL)
+				{
+					on_print(b);
+				}
+
 				return 0;
 			}
 
@@ -308,7 +332,11 @@ extern "C" int am_parse(int argc, char** argv)
 					//        +2
 					snprintf(d, 128, c, argv[i] + 2);
 
-					on_print(d);
+					if(on_print != NULL)
+					{
+						on_print(d);
+					}
+
 					return 0;
 				}
 
@@ -382,7 +410,11 @@ extern "C" int am_parse(int argc, char** argv)
 					//       +1
 					snprintf(e, 128, d, argv[i] + 1);
 
-					on_print(e);
+					if(on_print != NULL)
+					{
+						on_print(e);
+					}
+
 					return 0;
 				}
 
