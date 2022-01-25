@@ -139,17 +139,18 @@ extern "C" int am_parse(int argc, char** argv)
 		return -1;
 	}
 
-	int indexToArgument = -1;
+	int numArguments = 0;
+	int* indexPerArgument = NULL;
 
 	int numParameterswithvalue = 0;
-	int* indexPerParameterwithvalue = 0;
+	int* indexPerParameterwithvalue = NULL;
 
 	int numParameterswithoutvalue = 0;
-	int* indexPerParameterwithoutvalue = 0;
+	int* indexPerParameterwithoutvalue = NULL;
 
 	// NOTE: returns 0 if failed (i.e. am_parse should then return 0)
 	//       returns 1 if succeeded
-	int(*attempt_to_parse_arg)(char**, int, int*, int*, int**, int*, int**) = [](char** argv, int i, int* indexToArgument, int* numParameterswithvalue, int** indexPerParameterwithvalue, int* numParameterswithoutvalue, int** indexPerParameterwithoutvalue)
+	int(*attempt_to_parse_arg)(char**, int, int*, int**, int*, int**, int*, int**) = [](char** argv, int i, int* numArguments, int** indexPerArgument, int* numParameterswithvalue, int** indexPerParameterwithvalue, int* numParameterswithoutvalue, int** indexPerParameterwithoutvalue)
 		{
 			int type; //< one of EArgvElementType
 
@@ -188,8 +189,7 @@ extern "C" int am_parse(int argc, char** argv)
 						return 0;
 					}
 
-					// i.e. argv[i] start with "---" //< ambigious whether..
-					// .. parameter with parametername '-' or argument "---"
+					// i.e. argv[i] start with "---"
 					if(argv[i][2] == '-')
 					{
 						if(on_print != NULL)
@@ -269,23 +269,38 @@ extern "C" int am_parse(int argc, char** argv)
 				}
 			}
 
-			// 3. check if argument/parameter isn't duplicate + if successful..
-			// .. register argument/parameter
+			// 3. check if argument/parameter isn't duplicate + if..
+			// .. successful register argument/parameter
 			switch(type)
 			{
 			case EArgvElementType_Argument:
-				if(*indexToArgument != -1)
 				{
-					if(on_print != NULL)
+					for(int j = 0; j < *numArguments; ++j)
 					{
-						char b[128];
-						snprintf(b, 128, "error: more than one argument supplied (i.e. %s and %s)\n", argv[*indexToArgument], argv[i]);
-						on_print(b);
-					}
-					return 0;
-				}
+						if(strcmp(argv[i], argv[(*indexPerArgument)[j]]) == 0)
+						{
+							if(on_print != NULL)
+							{
+								char c[128];
+								snprintf(c, 128, "error: duplicate argument \"%s\"\n", argv[i]);
 
-				*indexToArgument = i;
+								on_print(c);
+							}
+							return 0;
+						}
+					}
+
+					int* b = *indexPerArgument;
+					//*indexPerArgument = new int[(*numArguments) + 1];
+					*indexPerArgument = (int*)new char[sizeof(int) * ((*numArguments) + 1)];
+					if(b != NULL)
+					{
+						memcpy(*indexPerArgument, b, (*numArguments) * sizeof(int));
+						delete b;
+					}
+					++(*numArguments);
+					(*indexPerArgument)[(*numArguments) - 1] = i;
+				}
 				break;
 			case EArgvElementType_Parameterwithoutvalue:
 				{
@@ -440,17 +455,21 @@ extern "C" int am_parse(int argc, char** argv)
 		};
 
 	// NOTE: returns 1 if succeeded
-	//       returns 0 if on_<argument|parameterwithoutvalue|parameterwithvalue>_parsed returned 0
+	//       returns 0 if on_<argument|parameterwithoutvalue|..
+	//       ..parameterwithvalue>_parsed returned 0
 	//       should never return -1 (that would be a bug)
-	int(*on_arg_parsed)(char**, int, int, int, int*, int, int*) = [](char** argv, int i, int indexToArgument, int numParameterswithvalue, int* indexPerParameterwithvalue, int numParameterswithoutvalue, int* indexPerParameterwithoutvalue)
+	int(*on_arg_parsed)(char**, int, int, int*, int, int*, int, int*) = [](char** argv, int i, int numArguments, int* indexPerArgument, int numParameterswithvalue, int* indexPerParameterwithvalue, int numParameterswithoutvalue, int* indexPerParameterwithoutvalue)
 		{
-			if(indexToArgument == i)
+			for(int j = 0; j < numArguments; ++j)
 			{
-				if(on_argument_parsed != NULL)
+				if(indexPerArgument[j] == i)
 				{
-					if(on_argument_parsed(argv[indexToArgument]) == 0)
+					if(on_argument_parsed != NULL)
 					{
-						return 0;
+						if(on_argument_parsed(argv[j]) == 0)
+						{
+							return 0;
+						}
 					}
 				}
 				return 1;
@@ -528,7 +547,7 @@ extern "C" int am_parse(int argc, char** argv)
 		for(int i = 1; i < argc; ++i) //< skip 1st element of argv
 		{
 			//if(attempt_to_parse_arg(argv, i) == 0)
-			if(attempt_to_parse_arg(argv, i, &indexToArgument, &numParameterswithvalue, &indexPerParameterwithvalue, &numParameterswithoutvalue, &indexPerParameterwithoutvalue) == 0)
+			if(attempt_to_parse_arg(argv, i, &numArguments, &indexPerArgument, &numParameterswithvalue, &indexPerParameterwithvalue, &numParameterswithoutvalue, &indexPerParameterwithoutvalue) == 0)
 			{
 				bSuccess = 0;
 				//break#0;
@@ -544,7 +563,7 @@ extern "C" int am_parse(int argc, char** argv)
 		for(int i = 1; i < argc; ++i) //< skip 1st element of argv
 		{
 			//if(on_arg_parsed(argv, i) != 1)
-			if(on_arg_parsed(argv, i, indexToArgument, numParameterswithvalue, indexPerParameterwithvalue, numParameterswithoutvalue, indexPerParameterwithoutvalue) != 1)
+			if(on_arg_parsed(argv, i, numArguments, indexPerArgument, numParameterswithvalue, indexPerParameterwithvalue, numParameterswithoutvalue, indexPerParameterwithoutvalue) != 1)
 			{
 				bSuccess = 0;
 				//break#0;
@@ -559,12 +578,17 @@ extern "C" int am_parse(int argc, char** argv)
 		break;
 	}
 
-	if(indexPerParameterwithoutvalue > 0)
+	if(numArguments > 0)
+	{
+		delete indexPerArgument;
+		//indexPerArgument = NULL;
+	}
+	if(numParameterswithoutvalue > 0)
 	{
 		delete indexPerParameterwithoutvalue;
 		//indexPerParameterwithoutvalue = NULL;
 	}
-	if(indexPerParameterwithvalue > 0)
+	if(numParameterswithvalue > 0)
 	{
 		delete indexPerParameterwithvalue;
 		//indexPerParameterwithvalue = NULL;
