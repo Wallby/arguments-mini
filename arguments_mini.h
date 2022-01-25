@@ -31,6 +31,7 @@ AM_FUNCTION void am_unset_on_parameterwithoutvalue_parsed();
 //       .. supplied twice
 // NOTE: returns 0 to indicate error (will discontinue parsing)
 //       returns 1 to continue parsing
+// NOTE: if arg == -<parametername>= (i.e. no value specified).. value == NULL
 //int(*on_parameterwithvalue_parsed)(char* parametername, char* value);
 // NOTE: -<parametername>=<value>
 AM_FUNCTION void am_set_on_parameterwithvalue_parsed(int(*a)(char*,char*));
