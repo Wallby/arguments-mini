@@ -466,13 +466,13 @@ extern "C" int am_parse(int argc, char** argv)
 				{
 					if(on_argument_parsed != NULL)
 					{
-						if(on_argument_parsed(argv[j]) == 0)
+						if(on_argument_parsed(argv[i]) == 0)
 						{
 							return 0;
 						}
 					}
+					return 1;
 				}
-				return 1;
 			}
 			for(int j = 0; j < numParameterswithoutvalue; ++j)
 			{
