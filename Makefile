@@ -7,3 +7,5 @@ arguments_mini.o: arguments_mini.cpp
 
 clean:
 	rm -f libarguments-mini.a arguments_mini.o
+# if windows leftover.. also remove windows leftover..
+	rm -f libarguments-mini.lib
