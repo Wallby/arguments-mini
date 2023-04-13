@@ -12,7 +12,7 @@ libarguments-mini$(LIBRARY_EXTENSION): arguments_mini.o
 	$(call RM,libarguments-mini$(LIBRARY_EXTENSION))
 	ar rcs libarguments-mini$(LIBRARY_EXTENSION) arguments_mini.o
 
-arguments_mini.o: arguments_mini.cpp
+arguments_mini.o: arguments_mini.cpp arguments_mini.h
 	g++ -c arguments_mini.cpp
 
 clean:

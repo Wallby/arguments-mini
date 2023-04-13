@@ -130,7 +130,7 @@ namespace
 	}
 }
 
-extern "C" int am_parse(int argc, char** argv)
+extern "C" int am_parse(int argc, char** argv, int bAllowDuplicateArguments, int bAllowDuplicateParameters)
 {
 	//if(argc == 0) //< not checked as if directly supplying argc+argv from main.. "couldn't occur"..?
 
@@ -150,7 +150,7 @@ extern "C" int am_parse(int argc, char** argv)
 
 	// NOTE: returns 0 if failed (i.e. am_parse should then return 0)
 	//       returns 1 if succeeded
-	int(*attempt_to_parse_arg)(char**, int, int*, int**, int*, int**, int*, int**) = [](char** argv, int i, int* numArguments, int** indexPerArgument, int* numParameterswithvalue, int** indexPerParameterwithvalue, int* numParameterswithoutvalue, int** indexPerParameterwithoutvalue)
+	int(*attempt_to_parse_arg)(char**, int, int, int, int*, int**, int*, int**, int*, int**) = [](char** argv, int bAllowDuplicateArguments, int bAllowDuplicateParameters, int i, int* numArguments, int** indexPerArgument, int* numParameterswithvalue, int** indexPerParameterwithvalue, int* numParameterswithoutvalue, int** indexPerParameterwithoutvalue)
 		{
 			int type; //< one of EArgvElementType
 
@@ -269,24 +269,28 @@ extern "C" int am_parse(int argc, char** argv)
 				}
 			}
 
-			// 3. check if argument/parameter isn't duplicate + if..
-			// .. successful register argument/parameter
+			// 3. register argument/parameter, if duplicate arguments/..
+			//    .. parameters aren't allowed.. check if argument/parameter..
+			//    .. isn't duplicate first
 			switch(type)
 			{
 			case EArgvElementType_Argument:
 				{
-					for(int j = 0; j < *numArguments; ++j)
+					if(bAllowDuplicateArguments == 0)
 					{
-						if(strcmp(argv[i], argv[(*indexPerArgument)[j]]) == 0)
+						for(int j = 0; j < *numArguments; ++j)
 						{
-							if(on_print != NULL)
+							if(strcmp(argv[i], argv[(*indexPerArgument)[j]]) == 0)
 							{
-								char c[128];
-								snprintf(c, 128, "error: duplicate argument \"%s\"\n", argv[i]);
+								if(on_print != NULL)
+								{
+									char c[128];
+									snprintf(c, 128, "error: duplicate argument \"%s\"\n", argv[i]);
 
-								on_print(c);
+									on_print(c);
+								}
+								return 0;
 							}
-							return 0;
 						}
 					}
 
@@ -304,59 +308,62 @@ extern "C" int am_parse(int argc, char** argv)
 				break;
 			case EArgvElementType_Parameterwithoutvalue:
 				{
-					int bIsDuplicate = 0;
-
-					int parameternameLength = a - 2;
-
-					for(int j = 0; j < *numParameterswithoutvalue; ++j)
+					if(bAllowDuplicateParameters ==  0)
 					{
-						// i.e. --<parametername>
-						//        ^
-						//        +2
-						if(strcmp(argv[i] + 2, argv[(*indexPerParameterwithoutvalue)[j]] + 2) == 0)
-						{
-							bIsDuplicate = 1;
-						}
-					}
-					for(int j = 0; j < *numParameterswithvalue; ++j)
-					{
-						struct
-						{
-							int parameternameLength;
-							int valueLength;
-						} c;
+						int bIsDuplicate = 0;
 
-						parse_parameterwithvalue(argv[(*indexPerParameterwithvalue)[j]], &c.parameternameLength, &c.valueLength);
+						int parameternameLength = a - 2;
 
-						if(parameternameLength != c.parameternameLength)
+						for(int j = 0; j < *numParameterswithoutvalue; ++j)
 						{
-							continue;
-						}
-
-						if(memcmp(argv[i] + 2, argv[(*indexPerParameterwithvalue)[j]] + 1, parameternameLength) == 0)
-						{
-							bIsDuplicate = 1;
-						}
-					}
-
-					if(bIsDuplicate == 1)
-					{
-						if(on_print != NULL)
-						{
-							char c[128];
-							snprintf(c, 128, "error: duplicate parameter \"%%.%is\"\n", parameternameLength);
-							// ^
-							// limit # characters to print
-
-							char d[128];
 							// i.e. --<parametername>
 							//        ^
 							//        +2
-							snprintf(d, 128, c, argv[i] + 2);
-
-							on_print(d);
+							if(strcmp(argv[i] + 2, argv[(*indexPerParameterwithoutvalue)[j]] + 2) == 0)
+							{
+								bIsDuplicate = 1;
+							}
 						}
-						return 0;
+						for(int j = 0; j < *numParameterswithvalue; ++j)
+						{
+							struct
+							{
+								int parameternameLength;
+								int valueLength;
+							} c;
+
+							parse_parameterwithvalue(argv[(*indexPerParameterwithvalue)[j]], &c.parameternameLength, &c.valueLength);
+
+							if(parameternameLength != c.parameternameLength)
+							{
+								continue;
+							}
+
+							if(memcmp(argv[i] + 2, argv[(*indexPerParameterwithvalue)[j]] + 1, parameternameLength) == 0)
+							{
+								bIsDuplicate = 1;
+							}
+						}
+
+						if(bIsDuplicate == 1)
+						{
+							if(on_print != NULL)
+							{
+								char c[128];
+								snprintf(c, 128, "error: duplicate parameter \"%%.%is\"\n", parameternameLength);
+								// ^
+								// limit # characters to print
+
+								char d[128];
+								// i.e. --<parametername>
+								//        ^
+								//        +2
+								snprintf(d, 128, c, argv[i] + 2);
+
+								on_print(d);
+							}
+							return 0;
+						}
 					}
 
 					int* b = *indexPerParameterwithoutvalue;
@@ -374,66 +381,69 @@ extern "C" int am_parse(int argc, char** argv)
 				break;
 			case EArgvElementType_Parameterwithvalue:
 				{
-					int bIsDuplicate = 0;
-
-					struct
+					if(bAllowDuplicateParameters == 0)
 					{
-						int parameternameLength;
-						int valueLength;
-					} b;
+						int bIsDuplicate = 0;
 
-					parse_parameterwithvalue(argv[i], &b.parameternameLength, &b.valueLength);
-
-					for(int j = 0; j < *numParameterswithvalue; ++j)
-					{
 						struct
 						{
 							int parameternameLength;
 							int valueLength;
-						} d;
+						} b;
 
-						parse_parameterwithvalue(argv[(*indexPerParameterwithvalue)[j]], &d.parameternameLength, &d.valueLength);
+						parse_parameterwithvalue(argv[i], &b.parameternameLength, &b.valueLength);
 
-						if(b.parameternameLength != d.parameternameLength)
+						for(int j = 0; j < *numParameterswithvalue; ++j)
 						{
-							continue;
-						}
+							struct
+							{
+								int parameternameLength;
+								int valueLength;
+							} d;
 
-						// i.e. -<parametername>=<value>
-						//       ^
-						//       +1
-						if(memcmp(argv[i] + 1, argv[(*indexPerParameterwithvalue)[j]] + 1, b.parameternameLength) == 0)
-						{
-							bIsDuplicate = 1;
-						}
-					}
+							parse_parameterwithvalue(argv[(*indexPerParameterwithvalue)[j]], &d.parameternameLength, &d.valueLength);
 
-					for(int j = 0; j < (*numParameterswithoutvalue); ++j)
-					{
-						if(memcmp(argv[i] + 1, argv[(*indexPerParameterwithoutvalue)[j]] + 2, b.parameternameLength) == 0)
-						{
-							bIsDuplicate = 1;
-						}
-					}
+							if(b.parameternameLength != d.parameternameLength)
+							{
+								continue;
+							}
 
-					if(bIsDuplicate == 1)
-					{
-						if(on_print != NULL)
-						{
-							char d[128];
-							snprintf(d, 128, "error: duplicate parameter \"%%.%is\"\n", b.parameternameLength);
-							// ^
-							// limit # characters to print
-
-							char e[128];
 							// i.e. -<parametername>=<value>
 							//       ^
 							//       +1
-							snprintf(e, 128, d, argv[i] + 1);
-
-							on_print(e);
+							if(memcmp(argv[i] + 1, argv[(*indexPerParameterwithvalue)[j]] + 1, b.parameternameLength) == 0)
+							{
+								bIsDuplicate = 1;
+							}
 						}
-						return 0;
+
+						for(int j = 0; j < (*numParameterswithoutvalue); ++j)
+						{
+							if(memcmp(argv[i] + 1, argv[(*indexPerParameterwithoutvalue)[j]] + 2, b.parameternameLength) == 0)
+							{
+								bIsDuplicate = 1;
+							}
+						}
+
+						if(bIsDuplicate == 1)
+						{
+							if(on_print != NULL)
+							{
+								char d[128];
+								snprintf(d, 128, "error: duplicate parameter \"%%.%is\"\n", b.parameternameLength);
+								// ^
+								// limit # characters to print
+
+								char e[128];
+								// i.e. -<parametername>=<value>
+								//       ^
+								//       +1
+								snprintf(e, 128, d, argv[i] + 1);
+
+								on_print(e);
+							}
+							return 0;
+						}
 					}
 
 					int* c = *indexPerParameterwithvalue;
@@ -547,7 +557,7 @@ extern "C" int am_parse(int argc, char** argv)
 		for(int i = 1; i < argc; ++i) //< skip 1st element of argv
 		{
 			//if(attempt_to_parse_arg(argv, i) == 0)
-			if(attempt_to_parse_arg(argv, i, &numArguments, &indexPerArgument, &numParameterswithvalue, &indexPerParameterwithvalue, &numParameterswithoutvalue, &indexPerParameterwithoutvalue) == 0)
+			if(attempt_to_parse_arg(argv, bAllowDuplicateArguments, bAllowDuplicateParameters, i, &numArguments, &indexPerArgument, &numParameterswithvalue, &indexPerParameterwithvalue, &numParameterswithoutvalue, &indexPerParameterwithoutvalue) == 0)
 			{
 				bSuccess = 0;
 				//break#0;

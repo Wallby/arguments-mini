@@ -42,8 +42,10 @@ AM_FUNCTION void am_unset_on_parameterwithvalue_parsed();
 //       .. if any)
 // NOTE: returns 0 if..
 //       .. any syntax error(s) in argv
-//       .. duplicate argument(s) is/are supplied
-//       .. duplicate parameter(s) is/are supplied
+//       .. bAllowDuplicateArguments == 0 and duplicate argument(s) is/are..
+//          ..  supplied
+//       .. bAllowDuplicateParameters == 0 and duplicate parameter(s) is/are..
+//          .. supplied
 //       returns 1 if succeeded
 //       returns -1 if "no code executed" (e.g. if argc == 1*)
 // NOTE: * argv[0] is ignored (i.e. argc is expected to be >= 1)
@@ -53,8 +55,10 @@ AM_FUNCTION void am_unset_on_parameterwithvalue_parsed();
 //       ^
 //       so.. if any on_*_parsed callback is called..
 //       .. syntax is valid
-//       .. no duplicate argument(s) is/are supplied
-//       .. no duplicate parameter(s) is/are supplied
-AM_FUNCTION int am_parse(int argc, char** argv);
+//       .. if bAllowDuplicateArguments == 0.. no duplicate argument(s) is/..
+//          ..are supplied
+//       .. if bAllowDuplicateParameters == 0.. no duplicate parameter(s)..
+//          .. is/are supplied
+AM_FUNCTION int am_parse(int argc, char** argv, int bAllowDuplicateArguments, int bAllowDuplicateParameters);
 
 #endif
