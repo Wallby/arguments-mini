@@ -1,119 +1,10 @@
 #include <arguments_mini.h>
 
+#include <test_mini.h>
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-
-// NOTE: for 11/12/13.. th (exceptions)
-//       for 1,21,31,etc... st
-//       for 2,22,32,etc... nd
-//       for 3,23,33,etc... rd
-//       otherwise.. th
-#define ORDINAL_NUMBER_SUFFIX(a) \
-	((a == 11) | (a == 12) | (a == 13) ? "th" : \
-	(a%10) == 1 ? "st" : \
-	(a%10) == 2 ? "nd" : \
-	(a%10) == 3 ? "rd" : \
-	"th")
-
-struct info_about_memory_allocation_t
-{
-	void* a;
-	int numBytesAllocated;
-};
-struct info_about_memory_allocation_t* infoPerMemoryAllocation = NULL;
-int numMemoryAllocations = 0; //< really # tracked memory allocations (excluding memory allocations for infoPerMemoryAllocation)
-size_t numBytesAllocated;
-
-// NOTE: thanks to https://stackoverflow.com/questions/1208644/how-can-i-get-the-size-of-a-memory-block-allocated-using-malloc
-void* __real_malloc(size_t a);
-void __real_free(void* a);
-
-void* __wrap_malloc(size_t a)
-{
-	void* b = __real_malloc(a);
-
-	struct info_about_memory_allocation_t* c = infoPerMemoryAllocation;
-	//infoPerMemoryAllocation = new info_about_memory_allocation_t[numMemoryAllocations + 1];
-	infoPerMemoryAllocation = (struct info_about_memory_allocation_t*)__real_malloc(sizeof(struct info_about_memory_allocation_t) * (numMemoryAllocations + 1));
-
-	if(c != NULL)
-	{
-		memcpy(infoPerMemoryAllocation, c, sizeof(struct info_about_memory_allocation_t) * numMemoryAllocations);
-		__real_free(c);
-	}
-
-	if((b == NULL) | (infoPerMemoryAllocation == NULL))
-	{
-		fputs("error: out of memory (test will be inaccurate)\n", stdout); //< not sure if that is the only case __real_malloc would return NULL..?
-		if(b == NULL)
-		{
-			__real_free(b);
-		}
-		if(infoPerMemoryAllocation == NULL)
-		{
-			__real_free(infoPerMemoryAllocation);
-		}
-		exit(1); //< i.e. continuing "like this" would not make a whole lot of sense..?
-	}
-
-	++numMemoryAllocations;
-	infoPerMemoryAllocation[numMemoryAllocations - 1].a = b;
-	infoPerMemoryAllocation[numMemoryAllocations - 1].numBytesAllocated = a;
-	numBytesAllocated += a;
-
-	return b;
-}
-
-void __wrap_free(void* a)
-{
-	int i;
-	for(i = 0; i < numMemoryAllocations; ++i)
-	{
-		if(infoPerMemoryAllocation[i].a == a)
-		{
-			break;
-		}
-	}
-	if(i == numMemoryAllocations)
-	{
-		fputs("warning: attempted to free memory that was never allocated\n", stdout);
-		exit(1); //< i.e. continuing "like this" would not make a whole lot of sense..?
-	}
-
-	numBytesAllocated -= infoPerMemoryAllocation[i].numBytesAllocated;
-	if((numMemoryAllocations - 1) > 0)
-	{
-		struct info_about_memory_allocation_t* b = infoPerMemoryAllocation;
-		//infoPerMemoryAllocation = new info_about_memory_allocation_t[numMemoryAllocations - 1];
-		infoPerMemoryAllocation = (struct info_about_memory_allocation_t*)__real_malloc(sizeof(struct info_about_memory_allocation_t) * (numMemoryAllocations - 1));
-
-		int numElementsBefore = i;
-		int numElementsAfter = numMemoryAllocations - numElementsBefore - 1;
-
-		if(numElementsBefore > 0)
-		{
-			memcpy(infoPerMemoryAllocation, b, sizeof(struct info_about_memory_allocation_t) * numElementsBefore);
-		}
-		if(numElementsAfter > 0)
-		{
-			memcpy(infoPerMemoryAllocation + numElementsBefore, b + numElementsBefore + 1, sizeof(struct info_about_memory_allocation_t) * numElementsAfter);
-		}
-
-		__real_free(b);
-	}
-	else
-	{
-		__real_free(infoPerMemoryAllocation);
-		infoPerMemoryAllocation = NULL;
-	}
-	--numMemoryAllocations;
-
-	__real_free(a);
-}
-
-//*********************************** tests ***********************************
 
 // NOTE: test 1 tests..
 //       .. if argv[0]==argument is ignored
@@ -550,56 +441,13 @@ int test_3()
 
 //*****************************************************************************
 
-//int main(int, char**)
-int main(int unusedArgc, char** unusedArgv)
+int main(int argc, char** argv)
 {
-// NOTE: will run test_##a() multiple times to assure that it is repeatable
-#define TEST(b) \
-	{ \
-		int a; \
-		fputs("test " #b " started\n", stdout); \
-		int i; \
-		for(i = 0; i < 10; ++i) \
-		{ \
-			size_t numBytesAllocatedBeforeTest##b = numBytesAllocated; \
-			a = test_##b(); \
-			if(a != 1) \
-			{ \
-				break; \
-			} \
-			size_t numBytesAllocatedAfterTest##b = numBytesAllocated; \
-			size_t numBytesLeakedByTest##b = numBytesAllocatedAfterTest##b - numBytesAllocatedBeforeTest##b; \
-			if(numBytesAllocatedAfterTest##b != numBytesAllocatedBeforeTest##b) \
-			{ \
-				printf("error: test " #b " leaked %zi bytes of memory %i%s time\n", numBytesLeakedByTest##b, i + 1, ORDINAL_NUMBER_SUFFIX(i+1)); \
-				return 1; \
-			} \
-		} \
-		if(a != 1) \
-		{ \
-			printf("error: test " #b " failed %i%s time\n", i + 1, ORDINAL_NUMBER_SUFFIX(i+1)); \
-			return 1; \
-		} \
-		else \
-		{ \
-			fputs("test " #b " succeeded\n", stdout); \
-		} \
-	}
-	
-	size_t numBytesAllocatedBefore = numBytesAllocated;
+    int numRepetitions = 100 - 1;
 
-	TEST(1);
-	TEST(2);
-	TEST(3);
-	
-	size_t numBytesAllocatedAfter = numBytesAllocated;
-	size_t numBytesLeaked = numBytesAllocatedAfter - numBytesAllocatedBefore;
-	if(numBytesAllocatedAfter != numBytesAllocatedBefore)
-	{
-		printf("error: %zi bytes of memory leaked\n", numBytesLeaked);
-	}
+	TM_TEST(1, numRepetitions);
+	TM_TEST(2, numRepetitions);
+	TM_TEST(3, numRepetitions);
 
-	fputs("all tests succeeded\n", stdout);
-
-	return 0;
+    return 0;
 }
